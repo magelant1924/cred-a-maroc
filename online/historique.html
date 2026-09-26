@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Espace client - Historique des Opérations</title>
+    <link rel="shortcut icon" href="https://images.seeklogo.com/logo-png/3/2/credit-agricole-logo-png_seeklogo-36514.png">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;600;800&family=Montserrat:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand: #ff6600; /* Orange/Accent */
+            --secondary: #003366; /* Bleu foncé/Sidebar */
+            --text-dark: #1f2933;
+            --bg-light: #f5f7fb;
+            --border-color: #e0e4f0;
+            --text-muted: #6c757d;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+        }
+        
+        /* --- STRUCTURE GLOBALE (Grid du Dashboard) --- */
+        .layout {
+            display: grid;
+            grid-template-columns: 240px 1fr 280px; 
+            grid-template-rows: auto 1fr;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+        .sidebar {
+            background: var(--secondary);
+            color: #fff;
+            padding: 20px 0;
+            grid-row: 1 / 3; 
+            z-index: 1000;
+            transition: transform 0.3s ease-in-out;
+        }
+        .header {
+            background: #fff;
+            grid-column: 2 / 4; 
+            grid-row: 1 / 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border-color);
+            gap: 15px;
+        }
+        .content-area {
+            grid-column: 2 / 4; 
+            grid-row: 2 / 3;
+            display: grid;
+            grid-template-columns: 1fr 280px; 
+        }
+        .main-content {
+            padding: 20px;
+        }
+        .right-sidebar {
+            padding: 20px;
+            background: #fff;
+            border-left: 1px solid var(--border-color);
+        }
+
+        /* --- Bouton Hamburger & Overlay Mobile --- */
+        .menu-toggle {
+            display: none;
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            color: var(--secondary);
+            cursor: pointer;
+            padding: 5px;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* --- Éléments du Header --- */
+        .tabs { display: flex; gap: 15px; overflow-x: auto; }
+        .tab {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 5px 0;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+        }
+        .tab.active {
+            color: var(--secondary);
+            border-bottom: 2px solid var(--brand);
+        }
+        .search input {
+            padding: 6px 12px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            width: 250px;
+            max-width: 100%;
+        }
+        .icons { font-size: 20px; display: flex; gap: 10px; }
+        .icons a { color: inherit; text-decoration: none; }
+        
+        /* --- Sidebar Styles --- */
+        .logo-section {
+            padding: 0 20px 20px;
+            text-align: center;
+        }
+        .logo-section img { 
+            height: 35px; 
+            background: #fff;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .logo-section p { font-size: 12px; color: #ccc; margin: 5px 0 0; }
+        
+        .nav-link {
+            display: block;
+            padding: 10px 20px;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .nav-link.active {
+            background: var(--brand);
+        }
+        .nav-link:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .highlight { background: #ffc107; color: var(--text-dark); padding: 2px 5px; border-radius: 4px; }
+        .new-badge { font-size: 10px; margin-left: 5px; background: #dc3545; padding: 2px 4px; border-radius: 3px; }
+
+        /* --- Styles Spécifiques Historique & Mobile Scroll --- */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; min-width: 600px; }
+        .history-table th, .history-table td { border: 1px solid var(--border-color); padding: 12px 15px; text-align: left; }
+        .history-table th { background-color: #f8f9fa; font-weight: 600; color: var(--secondary); }
+        .history-table tr:hover { background-color: #f1f1f1; }
+        .amount-debit { color: #dc3545; font-weight: 700; }
+        .amount-credit { color: #28a745; font-weight: 700; }
+
+        /* --- Widgets de droite --- */
+        .widget {
+            background: #fff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+        .widget h4 { color: var(--secondary); margin: 0 0 8px; }
+        .widget a { color: var(--brand); text-decoration: none; }
+        .widget .btn {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* ========================================================== */
+        /* --- MEDIA QUERY pour Tablettes & Mobiles (Max-width 1024px) --- */
+        /* ========================================================== */
+        @media (max-width: 1024px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                width: 260px;
+                transform: translateX(-100%);
+                overflow-y: auto;
+                box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .menu-toggle {
+                display: block;
+            }
+
+            .header {
+                grid-column: 1 / 2;
+                padding: 10px 15px;
+            }
+
+            .content-area {
+                grid-column: 1 / 2;
+                grid-template-columns: 1fr;
+            }
+
+            .right-sidebar {
+                border-left: none;
+                border-top: 1px solid var(--border-color);
+            }
+
+            .header input {
+                width: 100%;
+            }
+        }
+
+        /* ========================================================== */
+        /* --- MEDIA QUERY pour Mobiles Android (Max-width 600px) --- */
+        /* ========================================================== */
+        @media (max-width: 600px) {
+            .header {
+                flex-wrap: wrap;
+            }
+            .header-right {
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 10px;
+            }
+            .main-content {
+                padding: 10px;
+            }
+            .search input {
+                width: 100%;
+            }
+            .icons {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="layout">
+    <div class="sidebar" id="sidebar">
+        <div class="logo-section">
+            <img src="https://images.seeklogo.com/logo-png/3/2/credit-agricole-logo-png_seeklogo-36514.png" alt="GTCO Logo">
+            <p>Espace client</p>
+        </div>
+        <nav>
+            <a href="dashboard.html" class="nav-link">Comptes &amp; Cartes</a>
+            <a href="credits.html" class="nav-link">Crédits </a>
+            <a href="cartes.html" class="nav-link">Cartes</a>
+            <a href="profil.html" class="nav-link">Profil</a>
+            <a href="#" class="nav-link"><span class="highlight">Rentabilis 3% </span><span class="new-badge">NEW</span></a>
+            <a href="virement.html" class="nav-link" style="margin-top: 20px;">Virement</a>
+            <a href="ajouter-beneficiaire.html" class="nav-link">Ajouter Bénéficiaire</a>
+            <a href="historique.html" class="nav-link active">Historique</a>
+            <a href="en-ligne.html" class="nav-link">Contacter en ligne</a>
+            <a href="#" class="nav-link" id="logoutLink">Déconnexion</a>
+        </nav>
+    </div>
+
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="menu-toggle" id="menuToggle" aria-label="Ouvrir le menu">☰</button>
+            <div class="tabs">
+                <a href="dashboard.html" class="tab">MES COMPTES</a>
+                <a href="cartes.html" class="tab">MES CARTES</a>
+                <a href="profil.html" class="tab">MON PROFIL</a>
+                <a href="rib.html" class="tab">MON RIB</a>
+            </div>
+        </div>
+        <div class="header-right" style="display: flex; align-items: center; gap: 15px;">
+            <div class="search" role="search"><input placeholder="Saisissez un mot-clé" /></div>
+            <div class="icons">
+                <div class="icon" title="phone">📞</div>
+                <div class="icon" title="mail">✉️</div>
+                <div class="icon" title="help">🖐️</div>
+                <div class="icon" title="suivi">📋</div>
+                <div class="icon" title="espace">🔒</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div class="main-content">
+            <div style="max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px;">
+                <h2>Historique des Opérations</h2>
+                <p style="font-size:14px; color: var(--text-muted); margin-bottom: 20px;">Retrouvez l'ensemble de vos transactions.</p>
+
+                <div class="table-responsive">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Compte</th>
+                                <th>Libellé</th>
+                                <th>Montant</th>
+                                <th>Statut / Détails</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <tr><td colspan="5" style="text-align: center;">Chargement de l'historique...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p id="no-history" style="text-align: center; margin-top: 30px;" hidden>Aucune transaction enregistrée pour le moment.</p>
+            </div>
+        </div>
+
+        <div class="right-sidebar">
+            <div class="widget">
+                <h4 style="color:var(--secondary);margin:0 0 8px">Mon Conseiller</h4>
+                <p style="font-weight:800;" id="advisor-name-widget-right">Chargement...</p>
+                <p style="font-size:13px;color:#666;margin-top:6px" id="advisorEmail">Contactez-le par téléphone ou email.</p>
+                <div style="text-align:right;margin-top:8px"><a href="profil.html" style="font-size: 13px;">Voir mon profil complet</a></div>
+            </div>
+
+            <div class="widget">
+                <h4 style="color:var(--secondary);margin:0 0 8px">FAQ / Aide</h4>
+                <p style="font-size:13px;color:#666;margin-top:6px">Consultez notre base de connaissances avant d'envoyer un message.</p>
+                <button class="btn" style="width:100%; margin-top:10px;">Accéder à la FAQ</button>
+            </div>
+            <img src="https://images.seeklogo.com/logo-png/3/2/credit-agricole-logo-png_seeklogo-36514.png" style="max-width: 100%; height: auto; margin-top: 20px; border-radius: 6px;" alt="Publicité ou aide">
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="data.js"></script>
+<script src="shared.js"></script>
+
+<script>
+    // Script d'ouverture/fermeture du Menu Slide Mobile
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    function toggleMenu() {
+        sidebar.classList.toggle('open');
+        sidebarOverlay.classList.toggle('active');
+        document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    }
+
+    menuToggle.addEventListener('click', toggleMenu);
+    sidebarOverlay.addEventListener('click', toggleMenu);
+
+    // Configuration Firebase
+    var firebaseConfig = {
+        apiKey: "AIzaSyBXQnoenWmWvYgoKT2qWQfk5j4cVLWZr4Y",
+        authDomain: "acs-v-e6ef3.firebaseapp.com",
+        projectId: "acs-v-e6ef3",
+        storageBucket: "acs-v-e6ef3.firebasestorage.app",
+        messagingSenderId: "849135031406",
+        appId: "1:849135031406:web:88f7deadc5569357d4027f"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    const db = firebase.firestore();
+    const PROFILES_COLLECTION = "profiles";
+
+    function displayHistory(historyData, accountLabel, historyBody, noHistoryMessage, currentUser) {
+        historyBody.innerHTML = '';
+
+        if (!historyData || historyData.length === 0) {
+            noHistoryMessage.hidden = false;
+            return;
+        }
+
+        noHistoryMessage.hidden = true;
+
+        historyData.sort((a, b) => {
+            if (a.timestamp && b.timestamp) {
+                return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+            }
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return (isNaN(dateB) ? 0 : dateB.getTime()) - (isNaN(dateA) ? 0 : dateA.getTime());
+        });
+
+        historyData.forEach(transaction => {
+            const row = historyBody.insertRow();
+
+            const date = transaction.date || (transaction.timestamp ? transaction.timestamp.split('T')[0] : '');
+            const amount = parseFloat(transaction.amount);
+            const isDebit = amount < 0;
+            const amountFormatted = typeof formatCurrency === 'function' ? formatCurrency(amount) : amount + ' €';
+            const amountClass = isDebit ? 'amount-debit' : 'amount-credit';
+
+            row.insertCell().textContent = date || '-';
+            row.insertCell().textContent = accountLabel;
+            
+            const libelle = transaction.motif || transaction.recipient || 'Opération';
+            row.insertCell().textContent = libelle;
+
+            const montantCell = row.insertCell();
+            montantCell.innerHTML = `<span class="${amountClass}">${amountFormatted}</span>`;
+
+            const statusText = transaction.status || 'Terminé';
+            let ibanDisplay = '';
+            if (transaction.iban && transaction.iban.length > 8) {
+                ibanDisplay = `IBAN: ${transaction.iban.slice(0, 4)}...${transaction.iban.slice(-4)}`;
+            }
+            const detailsText = ibanDisplay ? `${ibanDisplay} (${statusText})` : statusText;
+            row.insertCell().textContent = detailsText;
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const authData = typeof checkAuth === 'function' ? checkAuth() : null;
+        if (!authData) return;
+
+        const historyBody = document.getElementById('history-body');
+        const noHistoryMessage = document.getElementById('no-history');
+
+        const userDocId = authData.docId;
+        if (!userDocId) {
+            historyBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:red;">Erreur : ID utilisateur manquant.</td></tr>';
+            return;
+        }
+
+        try {
+            const docRef = db.collection(PROFILES_COLLECTION).doc(userDocId);
+            const docSnap = await docRef.get();
+
+            if (!docSnap.exists) {
+                historyBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucun profil trouvé dans Firestore.</td></tr>';
+                return;
+            }
+
+            const userData = docSnap.data();
+            const history = userData.history || [];
+            const accountLabel = userData.bankLabel || authData.bankLabel || "Compte Courant";
+
+            // CORRECTION ICI : ciblage de 'advisorEmail' qui existe dans le HTML
+            const advisorNameElem = document.getElementById('advisor-name-widget-right');
+            const advisorEmailElem = document.getElementById('advisorEmail');
+
+            if (advisorNameElem) {
+                advisorNameElem.textContent = userData.advisorName || 'N/A';
+            }
+            if (advisorEmailElem) {
+                advisorEmailElem.textContent = userData.advisorEmail ? `E-mail: ${userData.advisorEmail}` : 'Contactez-le par téléphone ou email.';
+            }
+
+            localStorage.setItem('transactionHistory', JSON.stringify(history));
+            displayHistory(history, accountLabel, historyBody, noHistoryMessage, userData);
+
+        } catch (error) {
+            console.error("Erreur de chargement de l'historique Firestore:", error);
+            historyBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:red;">Erreur de chargement de l\'historique.</td></tr>';
+        }
+    });
+</script>
+</body>
+</html>
